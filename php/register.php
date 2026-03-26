@@ -22,35 +22,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $secretKey = '6Lf_DYssAAAAALLJg5WgoLsEg6xKY-6QVa7Shjuq'; // reCAPTCHA secret key
             $verifyUrl = 'https://www.google.com/recaptcha/api/siteverify';
-            $postData = http_build_query([
-                'secret' => $secretKey,
-                'response' => $recaptchaResponse,
-                'remoteip' => $_SERVER['REMOTE_ADDR'] ?? null,
-            ]);
-
-            // Use file_get_contents if allowed, otherwise fall back to cURL
-            $response = null;
-            if (ini_get('allow_url_fopen')) {
-                $response = @file_get_contents($verifyUrl . '?' . $postData);
-            }
-            if ($response === false || empty($response)) {
-                if (function_exists('curl_version')) {
-                    $ch = curl_init($verifyUrl);
-                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                    curl_setopt($ch, CURLOPT_POST, true);
-                    curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
-                    $response = curl_exec($ch);
-                    curl_close($ch);
-                }
-            }
-
+            $response = file_get_contents($verifyUrl . '?secret=' . $secretKey . '&response=' . $recaptchaResponse);
             $responseKeys = json_decode($response, true);
-            if (!is_array($responseKeys) || empty($responseKeys['success'])) {
-                $reason = "Captcha verification failed";
-                if (isset($responseKeys['error-codes']) && is_array($responseKeys['error-codes']) && count($responseKeys['error-codes']) > 0) {
-                    $reason .= ": " . implode(', ', $responseKeys['error-codes']);
-                }
-                $errors[] = $reason;
+            if (!$responseKeys['success']) {
+                $errors[] = "Captcha verification failed";
             }
         }
 
